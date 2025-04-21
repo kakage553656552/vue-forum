@@ -10,7 +10,7 @@
             <li><router-link to="/" exact active-class="active">首页</router-link></li>
             <li><router-link to="/categories" active-class="active">分类</router-link></li>
             <li v-if="isLoggedIn"><router-link to="/create-post" class="create-post-link" active-class="active">发布帖子</router-link></li>
-            <li v-if="isAdmin"><router-link to="/user-management" class="admin-link" active-class="active">用户管理</router-link></li>
+            <li v-if="isAdmin"><router-link to="/user-management" class="admin-link" active-class="active">管理</router-link></li>
             <li v-if="!isLoggedIn"><router-link to="/login" active-class="active">登录</router-link></li>
             <li v-if="!isLoggedIn"><router-link to="/register" active-class="active">注册</router-link></li>
           </ul>

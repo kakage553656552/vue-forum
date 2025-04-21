@@ -5,8 +5,8 @@
         <h1>AI论坛 - 用户管理</h1>
         
         <div class="filters">
-          <input v-model="searchQuery" placeholder="搜索用户名或邮箱" class="search-input" />
-          <select v-model="roleFilter" class="role-filter">
+          <input v-model="searchQuery" @input="onSearchChange" placeholder="搜索用户名或邮箱" class="search-input" />
+          <select v-model="roleFilter" @change="onRoleFilterChange" class="role-filter">
             <option value="">全部角色</option>
             <option value="admin">管理员</option>
             <option value="user">普通用户</option>
@@ -19,6 +19,7 @@
             <thead>
               <tr>
                 <th>ID</th>
+                <th>头像</th>
                 <th>用户名</th>
                 <th>邮箱</th>
                 <th>角色</th>
@@ -31,6 +32,11 @@
             <tbody>
               <tr v-for="user in filteredUsers" :key="user.id">
                 <td>{{ user.id.substring(0, 8) }}...</td>
+                <td>
+                  <div class="user-avatar">
+                    <img :src="user.avatar || defaultAvatar" alt="用户头像" class="avatar-img">
+                  </div>
+                </td>
                 <td>{{ user.username }}</td>
                 <td>{{ user.email }}</td>
                 <td>
@@ -52,9 +58,14 @@
         </div>
         
         <div class="pagination">
-          <button @click="prevPage" :disabled="currentPage === 1">上一页</button>
-          <span>第 {{ currentPage }} 页 / 共 {{ totalPages }} 页</span>
-          <button @click="nextPage" :disabled="currentPage === totalPages">下一页</button>
+          <el-pagination
+            @current-change="handleCurrentChange"
+            :current-page="currentPage"
+            :page-size="itemsPerPage"
+            layout="prev, pager, next, jumper"
+            :total="totalUsers"
+            background>
+          </el-pagination>
         </div>
       </el-tab-pane>
       
@@ -62,8 +73,8 @@
         <h1>AI论坛 - 帖子管理</h1>
         
         <div class="filters">
-          <input v-model="postSearchQuery" placeholder="搜索帖子标题" class="search-input" />
-          <select v-model="postCategoryFilter" class="category-filter">
+          <input v-model="postSearchQuery" @input="onPostSearchChange" placeholder="搜索帖子标题" class="search-input" />
+          <select v-model="postCategoryFilter" @change="onPostCategoryChange" class="category-filter">
             <option value="">全部分类</option>
             <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
           </select>
@@ -117,9 +128,14 @@
         </div>
         
         <div class="pagination">
-          <button @click="prevPostPage" :disabled="currentPostPage === 1">上一页</button>
-          <span>第 {{ currentPostPage }} 页 / 共 {{ totalPostPages }} 页</span>
-          <button @click="nextPostPage" :disabled="currentPostPage === totalPostPages">下一页</button>
+          <el-pagination
+            @current-change="handlePostCurrentChange"
+            :current-page="currentPostPage"
+            :page-size="postsPerPage"
+            layout="prev, pager, next, jumper"
+            :total="totalPosts"
+            background>
+          </el-pagination>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -131,13 +147,20 @@
         <h2>AI论坛 - {{ selectedUser.username }} 的详细信息</h2>
         
         <div class="user-info">
-          <p><strong>ID:</strong> {{ selectedUser.id }}</p>
-          <p><strong>用户名:</strong> {{ selectedUser.username }}</p>
-          <p><strong>邮箱:</strong> {{ selectedUser.email }}</p>
-          <p><strong>角色:</strong> {{ selectedUser.role === 'admin' ? '管理员' : '普通用户' }}</p>
-          <p><strong>创建时间:</strong> {{ formatDate(selectedUser.createdAt) }}</p>
-          <p><strong>发帖数:</strong> {{ selectedUser.postCount }}</p>
-          <p><strong>回复数:</strong> {{ selectedUser.replyCount }}</p>
+          <div class="user-header">
+            <div class="user-avatar-large">
+              <img :src="selectedUser.avatar || defaultAvatar" alt="用户头像" class="large-avatar-img">
+            </div>
+            <div class="user-details">
+              <p><strong>ID:</strong> {{ selectedUser.id }}</p>
+              <p><strong>用户名:</strong> {{ selectedUser.username }}</p>
+              <p><strong>邮箱:</strong> {{ selectedUser.email }}</p>
+              <p><strong>角色:</strong> {{ selectedUser.role === 'admin' ? '管理员' : '普通用户' }}</p>
+              <p><strong>创建时间:</strong> {{ formatDate(selectedUser.createdAt) }}</p>
+              <p><strong>发帖数:</strong> {{ selectedUser.postCount }}</p>
+              <p><strong>回复数:</strong> {{ selectedUser.replyCount }}</p>
+            </div>
+          </div>
         </div>
         
         <h3>发布的帖子</h3>
@@ -154,6 +177,7 @@
 
 <script>
 import axios from 'axios';
+import _ from 'lodash';
 
 export default {
   name: 'UserManagement',
@@ -174,7 +198,10 @@ export default {
       postSearchQuery: '',
       postCategoryFilter: '',
       currentPostPage: 1,
-      postsPerPage: 10
+      postsPerPage: 10,
+      defaultAvatar: 'https://bootdey.com/img/Content/avatar/avatar1.png',
+      totalUsers: 0,
+      totalPosts: 0
     };
   },
   computed: {
@@ -195,37 +222,10 @@ export default {
         result = result.filter(user => user.role === this.roleFilter);
       }
       
-      // 分页
-      const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-      const endIndex = startIndex + this.itemsPerPage;
-      return result.slice(startIndex, endIndex);
-    },
-    totalPages() {
-      return Math.max(1, Math.ceil(this.filteredUsers.length / this.itemsPerPage));
+      return result;
     },
     filteredPosts() {
-      let result = this.allPosts;
-      
-      // 标题搜索
-      if (this.postSearchQuery) {
-        const query = this.postSearchQuery.toLowerCase();
-        result = result.filter(post => 
-          post.title.toLowerCase().includes(query)
-        );
-      }
-      
-      // 分类过滤
-      if (this.postCategoryFilter) {
-        result = result.filter(post => post.categoryId === this.postCategoryFilter);
-      }
-      
-      // 分页
-      const startIndex = (this.currentPostPage - 1) * this.postsPerPage;
-      const endIndex = startIndex + this.postsPerPage;
-      return result.slice(startIndex, endIndex);
-    },
-    totalPostPages() {
-      return Math.max(1, Math.ceil(this.allPosts.length / this.postsPerPage));
+      return this.allPosts;
     }
   },
   created() {
@@ -238,11 +238,19 @@ export default {
       try {
         const token = localStorage.getItem('token');
         const response = await axios.get('/api/users', {
+          params: {
+            page: this.currentPage,
+            pageSize: this.itemsPerPage,
+            search: this.searchQuery,
+            role: this.roleFilter
+          },
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-        this.users = response.data;
+        
+        this.users = response.data.users;
+        this.totalUsers = response.data.total;
       } catch (error) {
         console.error('获取用户列表失败:', error);
         if (error.response && error.response.status === 401) {
@@ -312,16 +320,11 @@ export default {
       this.searchQuery = '';
       this.roleFilter = '';
       this.currentPage = 1;
+      this.fetchUsers();
     },
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--;
-      }
-    },
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++;
-      }
+    handleCurrentChange(page) {
+      this.currentPage = page;
+      this.fetchUsers();
     },
     // 获取所有分类
     async fetchCategories() {
@@ -342,14 +345,14 @@ export default {
     // 获取所有帖子
     async fetchAllPosts() {
       try {
-        // 这里假设后端有一个API端点可以获取所有帖子
-        // 如果没有，需要创建一个或者多次调用分页API
         const token = localStorage.getItem('token');
         
-        // 这里我们通过现有的API获取帖子，可能需要多次请求来获取所有帖子
-        const response = await axios.get('/api/posts', {
+        const response = await axios.get('/api/posts/admin', {
           params: {
-            pageSize: 1000 // 获取大量帖子
+            page: this.currentPostPage,
+            pageSize: this.postsPerPage,
+            search: this.postSearchQuery,
+            category: this.postCategoryFilter
           },
           headers: {
             Authorization: `Bearer ${token}`
@@ -357,8 +360,9 @@ export default {
         });
         
         this.allPosts = response.data.posts;
+        this.totalPosts = response.data.total;
       } catch (error) {
-        console.error('获取所有帖子失败:', error);
+        console.error('获取帖子失败:', error);
         if (error.response && error.response.status === 401) {
           this.$router.push('/login');
         }
@@ -421,19 +425,32 @@ export default {
       this.postSearchQuery = '';
       this.postCategoryFilter = '';
       this.currentPostPage = 1;
+      this.fetchAllPosts();
     },
     
-    // 帖子分页控制
-    prevPostPage() {
-      if (this.currentPostPage > 1) {
-        this.currentPostPage--;
-      }
+    handlePostCurrentChange(page) {
+      this.currentPostPage = page;
+      this.fetchAllPosts();
     },
     
-    nextPostPage() {
-      if (this.currentPostPage < this.totalPostPages) {
-        this.currentPostPage++;
-      }
+    onSearchChange: _.debounce(function() {
+      this.currentPage = 1;
+      this.fetchUsers();
+    }, 300),
+    
+    onRoleFilterChange() {
+      this.currentPage = 1;
+      this.fetchUsers();
+    },
+    
+    onPostSearchChange: _.debounce(function() {
+      this.currentPostPage = 1;
+      this.fetchAllPosts();
+    }, 300),
+    
+    onPostCategoryChange() {
+      this.currentPostPage = 1;
+      this.fetchAllPosts();
     }
   }
 };
@@ -495,6 +512,11 @@ h1 {
 .users-table th {
   background-color: #f5f5f5;
   font-weight: bold;
+}
+
+.users-table th:nth-child(2), .users-table td:nth-child(2) {
+  width: 60px;
+  text-align: center;
 }
 
 .users-table tr:hover {
@@ -678,5 +700,64 @@ h1 {
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f1f1f1;
+  margin: 0 auto;
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.user-avatar:hover {
+  transform: scale(1.1);
+  border-color: #4299e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-header {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.user-avatar-large {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #f1f1f1;
+  border: 3px solid #4299e1;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.large-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.user-avatar-large:hover .large-avatar-img {
+  transform: scale(1.1);
+}
+
+.user-details {
+  flex: 1;
 }
 </style> 

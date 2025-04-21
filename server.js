@@ -254,6 +254,63 @@ app.get('/api/categories/:id', (req, res) => {
   }
 });
 
+// 获取帖子列表（管理员专用，包含所有帖子）
+app.get('/api/posts/admin', authenticateToken, isAdmin, (req, res) => {
+  try {
+    const { page = 1, pageSize = 10, search = '', category = '' } = req.query;
+    const pageNum = parseInt(page);
+    const pageSizeNum = parseInt(pageSize);
+    
+    // 获取所有帖子并补充作者信息
+    let allPosts = db.data.posts.map(post => {
+      const author = db.data.users.find(user => user.id === post.authorId);
+      const replyCount = db.data.replies.filter(reply => reply.postId === post.id).length;
+      
+      return {
+        ...post,
+        author: author ? { 
+          id: author.id, 
+          username: author.username,
+          avatar: author.avatar 
+        } : null,
+        replyCount
+      };
+    });
+    
+    // 根据搜索条件过滤帖子
+    if (search) {
+      const searchLower = search.toLowerCase();
+      allPosts = allPosts.filter(post => 
+        post.title.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // 根据分类过滤帖子
+    if (category) {
+      allPosts = allPosts.filter(post => post.categoryId === category);
+    }
+    
+    // 获取总帖子数
+    const total = allPosts.length;
+    
+    // 分页
+    const startIndex = (pageNum - 1) * pageSizeNum;
+    const endIndex = startIndex + pageSizeNum;
+    const paginatedPosts = allPosts.slice(startIndex, endIndex);
+    
+    res.json({
+      posts: paginatedPosts,
+      total,
+      page: pageNum,
+      pageSize: pageSizeNum,
+      totalPages: Math.ceil(total / pageSizeNum)
+    });
+  } catch (error) {
+    console.error('获取帖子列表错误:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
 // 获取帖子列表
 app.get('/api/posts', (req, res) => {
   try {
@@ -635,8 +692,12 @@ app.get('/api/user/posts', authenticateToken, (req, res) => {
 // 获取所有用户（仅管理员可访问）
 app.get('/api/users', authenticateToken, isAdmin, (req, res) => {
   try {
+    const { page = 1, pageSize = 10, search = '', role = '' } = req.query;
+    const pageNum = parseInt(page);
+    const pageSizeNum = parseInt(pageSize);
+    
     // 为每个用户计算发帖数和回复数
-    const usersWithStats = db.data.users.map(user => {
+    let usersWithStats = db.data.users.map(user => {
       const { password, ...userWithoutPassword } = user;
       
       // 计算用户发帖数
@@ -652,7 +713,35 @@ app.get('/api/users', authenticateToken, isAdmin, (req, res) => {
       };
     });
     
-    res.json(usersWithStats);
+    // 根据搜索条件过滤用户
+    if (search) {
+      const searchLower = search.toLowerCase();
+      usersWithStats = usersWithStats.filter(user => 
+        user.username.toLowerCase().includes(searchLower) || 
+        user.email.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // 根据角色过滤用户
+    if (role) {
+      usersWithStats = usersWithStats.filter(user => user.role === role);
+    }
+    
+    // 获取总用户数
+    const total = usersWithStats.length;
+    
+    // 分页
+    const startIndex = (pageNum - 1) * pageSizeNum;
+    const endIndex = startIndex + pageSizeNum;
+    const paginatedUsers = usersWithStats.slice(startIndex, endIndex);
+    
+    res.json({
+      users: paginatedUsers,
+      total,
+      page: pageNum,
+      pageSize: pageSizeNum,
+      totalPages: Math.ceil(total / pageSizeNum)
+    });
   } catch (error) {
     console.error('获取用户列表错误:', error);
     res.status(500).json({ message: '服务器错误' });

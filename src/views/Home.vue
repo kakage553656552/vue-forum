@@ -1,34 +1,36 @@
 <template>
   <div class="home">
-    <div class="home-header">
-      <h2>AI论坛 - 帖子列表</h2>
-      
-      <div class="filter-container">
-        <!-- 排序方式选择 -->
-        <div class="sort-options">
-          <el-radio-group v-model="sortMode" size="medium" @change="handleSortChange">
-            <el-radio-button label="newest">最新</el-radio-button>
-            <el-radio-button label="hot">最热</el-radio-button>
-            <el-radio-button label="replies">回复最多</el-radio-button>
-          </el-radio-group>
+    <!-- 分类模块 -->
+    <div class="categories-section">
+      <div class="category-grid" v-if="categories.length">
+        <div v-for="category in categories" :key="category.id" 
+             class="category-item" 
+             @click="selectCategory(category.id)">
+          <h3>{{ category.name }}</h3>
+          <p>{{ category.description }}</p>
+          <div class="category-stats">
+            <span>主题数量: {{ category.topicCount || 0 }}</span>
+            <span>帖子数量: {{ category.postCount || 0 }}</span>
+          </div>
         </div>
-        
-        <!-- 分类筛选 -->
-        <el-select 
-          v-model="selectedCategory" 
-          placeholder="选择分类" 
-          clearable 
-          @change="handleCategoryChange"
-          size="medium"
-        >
-          <el-option
-            v-for="category in categories"
-            :key="category.id"
-            :label="category.name"
-            :value="category.id"
-          >
-          </el-option>
-        </el-select>
+      </div>
+    </div>
+    
+    <div class="filter-container">
+      <!-- 当前选中的分类 -->
+      <div class="current-category" v-if="selectedCategory">
+        <el-tag size="medium" closable @close="clearCategory">
+          {{ getCategoryName(selectedCategory) }}
+        </el-tag>
+      </div>
+      
+      <!-- 排序方式选择 -->
+      <div class="sort-options">
+        <el-radio-group v-model="sortMode" size="medium" @change="handleSortChange">
+          <el-radio-button label="newest">最新</el-radio-button>
+          <el-radio-button label="hot">最热</el-radio-button>
+          <el-radio-button label="replies">回复最多</el-radio-button>
+        </el-radio-group>
       </div>
     </div>
     
@@ -200,13 +202,26 @@ export default {
       // 重新获取帖子
       this.fetchPosts();
     },
-    handleCategoryChange(value) {
-      this.selectedCategory = value;
+    selectCategory(categoryId) {
+      this.selectedCategory = categoryId;
       this.currentPage = 1; // 切换分类时重置页码
       
       // 更新URL查询参数
       this.updateRouteQuery({ 
-        category: value || undefined, 
+        category: categoryId, 
+        page: 1 
+      });
+      
+      // 重新获取帖子
+      this.fetchPosts();
+    },
+    clearCategory() {
+      this.selectedCategory = '';
+      this.currentPage = 1;
+      
+      // 更新URL查询参数
+      this.updateRouteQuery({ 
+        category: undefined, 
         page: 1 
       });
       
@@ -281,13 +296,20 @@ export default {
 
 .filter-container {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
   align-items: center;
-  margin-top: 10px;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 15px;
+}
+
+.category-filter {
+  min-width: 200px;
+  margin-bottom: 10px;
 }
 
 .sort-options {
-  margin-right: 10px;
+  margin-bottom: 10px;
 }
 
 .loading-container {
@@ -435,5 +457,59 @@ export default {
 
 .pinned-tag {
   margin-left: 8px;
+}
+
+.categories-section {
+  margin-bottom: 30px;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.category-item {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  height: 100%;
+}
+
+.category-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.category-item h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.category-item p {
+  color: #606266;
+  font-size: 13px;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.category-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #909399;
+}
+
+.current-category {
+  margin-right: 15px;
 }
 </style>

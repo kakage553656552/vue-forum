@@ -113,13 +113,16 @@ export default {
       loading: false,
       error: null,
       defaultAvatars: [
-        'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
-        'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-        'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9638a54940382568c9dpng.png',
-        'https://cube.elemecdn.com/e/fd/0fc7d20532fdaf769a25683617711png.png',
-        'https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg'
+        'https://bootdey.com/img/Content/avatar/avatar1.png',
+        'https://bootdey.com/img/Content/avatar/avatar2.png',
+        'https://bootdey.com/img/Content/avatar/avatar3.png',
+        'https://bootdey.com/img/Content/avatar/avatar4.png',
+        'https://bootdey.com/img/Content/avatar/avatar5.png',
+        'https://bootdey.com/img/Content/avatar/avatar6.png',
+        'https://bootdey.com/img/Content/avatar/avatar7.png',
+        'https://bootdey.com/img/Content/avatar/avatar8.png'
       ],
-      selectedAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+      selectedAvatar: 'https://bootdey.com/img/Content/avatar/avatar1.png',
       uploadedAvatar: null,
       avatarFile: null
     }
@@ -155,25 +158,13 @@ export default {
         return this.defaultAvatars[0];
       }
       
-      if (!this.avatarFile) {
-        return this.selectedAvatar;
+      // 如果有自定义上传的头像，直接返回base64数据
+      if (this.uploadedAvatar) {
+        return this.uploadedAvatar;
       }
       
-      const formData = new FormData();
-      formData.append('avatar', this.avatarFile);
-      
-      try {
-        const response = await axios.post('/api/upload/avatar', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-        
-        return response.data.url;
-      } catch (error) {
-        console.error('上传头像失败', error);
-        throw new Error('上传头像失败');
-      }
+      // 返回选中的默认头像
+      return this.selectedAvatar;
     },
     
     async register() {

@@ -294,13 +294,16 @@ export default {
       profileSubmitting: false,
       avatarDialogVisible: false,
       defaultAvatars: [
-        'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
-        'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-        'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9638a54940382568c9dpng.png',
-        'https://cube.elemecdn.com/e/fd/0fc7d20532fdaf769a25683617711png.png',
-        'https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg'
+        'https://bootdey.com/img/Content/avatar/avatar1.png',
+        'https://bootdey.com/img/Content/avatar/avatar2.png',
+        'https://bootdey.com/img/Content/avatar/avatar3.png',
+        'https://bootdey.com/img/Content/avatar/avatar4.png',
+        'https://bootdey.com/img/Content/avatar/avatar5.png',
+        'https://bootdey.com/img/Content/avatar/avatar6.png',
+        'https://bootdey.com/img/Content/avatar/avatar7.png',
+        'https://bootdey.com/img/Content/avatar/avatar8.png'
       ],
-      defaultAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+      defaultAvatar: 'https://bootdey.com/img/Content/avatar/avatar1.png',
       selectedAvatar: null,
       uploadedAvatar: null,
       avatarFile: null,
@@ -638,23 +641,9 @@ export default {
       try {
         let avatarUrl = this.selectedAvatar
         
-        // 如果是上传的自定义头像，先上传到服务器
-        if (this.avatarFile) {
-          const formData = new FormData()
-          formData.append('avatar', this.avatarFile)
-          
-          const uploadResponse = await axios.post('/api/upload/avatar', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          })
-          
-          if (uploadResponse.data.success) {
-            avatarUrl = uploadResponse.data.url
-          } else {
-            throw new Error(uploadResponse.data.message || '上传头像失败')
-          }
+        // 如果是上传的自定义头像，直接使用base64数据
+        if (this.uploadedAvatar) {
+          avatarUrl = this.uploadedAvatar
         }
         
         // 更新用户头像
