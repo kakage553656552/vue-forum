@@ -29,7 +29,7 @@ if (!db.data.categories || db.data.categories.length === 0) {
     { id: '1', name: '综合讨论', description: '各种话题的综合讨论区' },
     { id: '2', name: '技术交流', description: '分享和讨论各种技术问题' },
     { id: '3', name: '问答专区', description: '提问和解答各种问题' },
-    { id: '4', name: '站务公告', description: '网站公告和规则' }
+    { id: '4', name: '资源共享', description: '分享各类有用的资源和工具' }
   ];
   await db.write();
 }
